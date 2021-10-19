@@ -1,0 +1,1 @@
+# Placeholder for PoseDetector class to be visible to others

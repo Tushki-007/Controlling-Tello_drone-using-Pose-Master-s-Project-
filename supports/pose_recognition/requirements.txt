@@ -1,0 +1,4 @@
+# list of library and package required
+opencv-python~=4.5.1.48
+mediapipe~=0.8.3.1
+numpy~=1.19.2
