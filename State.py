@@ -19,7 +19,7 @@ from supports.tello_sdk.Stream import Stream
 # Debug/development setting
 DEBUG_PRINT = False
 LOCAL_SENSOR_ENABLE = False
-TELLO_SYSTEM_ENABLE = False
+TELLO_SYSTEM_ENABLE = True
 CAMERA_CALIBRATION_ENABLE = False
 WEBCAM_INDEX_NUM = "assets/test.mp4"
 
@@ -60,12 +60,12 @@ PID_KI_YAW = 0.0
 PID_KD_YAW = 0.0
 
 # Tello RC speed limiter
-TELLO_FORW_BACK_MIN_SPEED = -30
-TELLO_FORW_BACK_MAX_SPEED = 30
+TELLO_FORW_BACK_MIN_SPEED = -40
+TELLO_FORW_BACK_MAX_SPEED = 40
 TELLO_LEFT_RIGHT_MIN_SPEED = -30
 TELLO_LEFT_RIGHT_MAX_SPEED = 30
-TELLO_UP_DOWN_MIN_SPEED = -30
-TELLO_UP_DOWN_MAX_SPEED = 30
+TELLO_UP_DOWN_MIN_SPEED = -50
+TELLO_UP_DOWN_MAX_SPEED = 50
 TELLO_YAW_MIN_SPEED = -10
 TELLO_YAW_MAX_SPEED = 10
 
@@ -250,8 +250,6 @@ class State(object):
         try:
             # Display frame and detected objects
             cv2.imshow("main", self.img_process_frame)
-            # fourcc = cv2.VideoWriter_fourcc(*'XVID')
-            # cv2.VideoWriter("video_out.avi", fourcc, 60, (self.frame_width, self.frame_height))
             cv2.waitKey(1)
         except Exception as error:
             pass
@@ -307,7 +305,7 @@ class State(object):
         self.landmark_list, self.world_landmark_list = self.pose_detect.find_body(self.img_process_frame, draw=True)
         try:
             # Get person centroid
-            self.person_centroid = self.pose_detect.centroid(self.img_process_frame, draw=True)
+            self.person_centroid = self.pose_detect.centroid(self.img_process_frame) #, draw=True)
             # Calculate end-to-end shoulder width in pixels
             self.person_shoulder_width_px = self.landmark_list[11][0] - self.landmark_list[12][0]
 
@@ -327,6 +325,8 @@ class State(object):
                 text = "COMMAND_MODE_ON"
             elif self.pose == "COMMAND_MODE_STOP":
                 self.command_mode = False
+                self.has_exercise_started = False
+                self.has_exercise_stopped = False
                 self.landing_flag = True
                 text = "COMMAND_MODE_OFF_LANDING"
             self._overlay_text(text, (10, self.frame_height-10), RED_COLOR)
@@ -374,7 +374,6 @@ class State(object):
 
         # Check for person existence
         if self.landmark_list is not None:
-        # if "person" in self.objects.keys():
             self.prev_detect_person = time.time()
         else:
             # Check if no person detected reach timeout
@@ -434,33 +433,27 @@ class State(object):
                     print("has_exercise_started")
                     time.sleep(1)
 
-            # Compute PID control for centralize person in the middle of frame (Y-axis)
-            # if TELLO_SYSTEM_ENABLE:
-            #     ground_height_cm = self.tello_sensor.get_tof()
-            #     up_down_pid = int(
-            #         self.control_up_down.calculate_pid(ground_height_cm, sample_time_sec, invert_output=True))
-
         if self.landmark_list is not None and not self.has_exercise_started and not self.has_exercise_stopped and self.command_mode:
             sample_time_sec = time.time() - self.prev_time_sec
             text_1 = " "
             # Compute PID control for maneuver command
             if self.pose == "RIGHT_HAND_ON_SHOULDER":
-                forw_back_pid = int(self.control_forw_back.calculate_pid(30, sample_time_sec, invert_output=True))
+                forw_back_pid = int(self.control_forw_back.calculate_pid(10, sample_time_sec, invert_output=True))
                 text_1 = "FORWARD"
             elif self.pose == "LEFT_HAND_ON_SHOULDER":
-                forw_back_pid = int(self.control_forw_back.calculate_pid(30, sample_time_sec))
+                forw_back_pid = int(self.control_forw_back.calculate_pid(10, sample_time_sec))
                 text_1 = "BACKWARD"
             elif self.pose == "RIGHT_ARM_UP":
-                left_right_pid = int(self.control_left_right.calculate_pid(30, sample_time_sec))
+                left_right_pid = int(self.control_left_right.calculate_pid(10, sample_time_sec))
                 text_1 = "RIGHT"
             elif self.pose == "LEFT_ARM_UP":
-                left_right_pid = int(self.control_left_right.calculate_pid(30, sample_time_sec, invert_output=True))
+                left_right_pid = int(self.control_left_right.calculate_pid(10, sample_time_sec, invert_output=True))
                 text_1 = "LEFT"
             elif self.pose == "BOTH_ARM_UP":
-                up_down_pid = int(self.control_up_down.calculate_pid(30, sample_time_sec, invert_output=True))
+                up_down_pid = int(self.control_up_down.calculate_pid(10, sample_time_sec, invert_output=True))
                 text_1 = "UP"
             elif self.pose == "BOTH_ARM_OVER_HEAD":
-                up_down_pid = int(self.control_up_down.calculate_pid(30, sample_time_sec))
+                up_down_pid = int(self.control_up_down.calculate_pid(10, sample_time_sec))
                 text_1 = "DOWN"
             elif self.pose == "BOTH_ARMS_RELAXED":
                 left_right_pid = 0
@@ -475,7 +468,7 @@ class State(object):
             self.log.info("landing Command Activated")
             self._overlay_text("landing Command Activated", (10, 100), GREEN_COLOR)
             self._overlay_text(self.pose, (10, 60), GREEN_COLOR)
-            cv2.waitKey(1000)
+            time.sleep(2)
             return StateEnum.EXIT
 
         # Save last computed PID time
@@ -509,6 +502,7 @@ class State(object):
 
             # Land command
             self.tello_command.land()
+            self.tello_command.disable_stream()
 
             # Clear flags
             self.tello_has_takeoff = False

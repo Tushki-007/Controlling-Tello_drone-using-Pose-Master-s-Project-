@@ -13,16 +13,20 @@ class PoseDetector:
                      smooth_landmarks=True,
                      enable_segmentation=False,
                      smooth_segmentation=True,
-                     min_detection_confidence=0.5,
+                     min_detection_confidence=0.7,
                      min_tracking_confidence=0.7):
             """Initializes a MediaPipe Pose object.
             Args:
-            static_image_mode: Whether to treat the input images as a batch of static and possibly unrelated images, or a video stream.
-            model_complexity: Complexity of the pose landmark model: 0, 1 or 2. smooth_landmarks: Whether to filter landmarks across different input images to reduce jitter.
+            static_image_mode: Whether to treat the input images as a batch of static and possibly unrelated images,
+             or a video stream.
+            model_complexity: Complexity of the pose landmark model: 0, 1 or 2. smooth_landmarks: Whether to filter
+             landmarks across different input images to reduce jitter.
             enable_segmentation: Whether to predict segmentation mask.
             smooth_segmentation: Whether to filter segmentation across different input images to reduce jitter.
-            min_detection_confidence: Minimum confidence value ([0.0, 1.0]) for person detection to be considered successful.
-            min_tracking_confidence: Minimum confidence value ([0.0, 1.0]) for the pose landmarks to be considered tracked successfully.
+            min_detection_confidence: Minimum confidence value ([0.0, 1.0]) for person detection to be considered
+             successful.
+            min_tracking_confidence: Minimum confidence value ([0.0, 1.0]) for the pose landmarks to be considered
+             tracked successfully.
             """
             # Initializing a PoseDetector object
             self.static_image_mode = static_image_mode
@@ -78,7 +82,10 @@ class PoseDetector:
             self.results = self.body.process(image)
             if draw:
                 image.flags.writeable = True
-                self.mp_draw.draw_landmarks(img, self.results.pose_landmarks, self.mp_pose.POSE_CONNECTIONS, landmark_drawing_spec=self.mp_drawing_styles.get_default_pose_landmarks_style())
+                self.mp_draw.draw_landmarks(img,
+                                            self.results.pose_landmarks,
+                                            self.mp_pose.POSE_CONNECTIONS,
+                                            landmark_drawing_spec=self.mp_drawing_styles.get_default_pose_landmarks_style())
             try:
                 for ID, lm in enumerate(self.results.pose_landmarks.landmark):
                     h, w, c = img.shape

@@ -8,6 +8,7 @@ import pose_recognition as pr
 
 # camera Input
 cap = cv2.VideoCapture("../../assets/test.mp4")
+
 # object for the class pose_recognition.py
 detector = pr.PoseDetector()
 # Initializing few previous variable to zero
